@@ -1,6 +1,9 @@
 package com.example.customerapi.service;
 
+import com.example.customerapi.dto.CustomerRequest;
+import com.example.customerapi.dto.CustomerResponse;
 import com.example.customerapi.entity.Customer;
+import com.example.customerapi.exception.CustomerNotFoundException;
 import com.example.customerapi.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 
@@ -15,39 +18,96 @@ public class CustomerService {
         this.customerRepository = customerRepository;
     }
 
-    public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
+    public List<CustomerResponse> getAllCustomers() {
+        return customerRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Customer createCustomer(Customer customer) {
-        return customerRepository.save(customer);
+    public CustomerResponse getCustomerById(Long id) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new CustomerNotFoundException(id));
+
+        return toResponse(customer);
     }
 
-    public List<Customer> createCustomers(List<Customer> customers) {
-        return customerRepository.saveAll(customers);
+    public CustomerResponse createCustomer(CustomerRequest request) {
+
+        Customer customer = new Customer();
+
+        customer.setName(request.getName());
+        customer.setEmail(request.getEmail());
+        customer.setAge(request.getAge());
+        customer.setPhoneNumber(request.getPhoneNumber());
+        customer.setAddress(request.getAddress());
+        customer.setStatus(request.getStatus());
+        customer.setCustomerType(request.getCustomerType());
+
+        Customer savedCustomer = customerRepository.save(customer);
+
+        return toResponse(savedCustomer);
     }
 
-    public Customer getCustomerById(Long id) {
-        return customerRepository.findById(id).orElseThrow( () -> new RuntimeException("Customer not found with id: " + id));
+    public CustomerResponse updateCustomer(Long id, CustomerRequest request) {
+
+        Customer existingCustomer = customerRepository.findById(id)
+                .orElseThrow(() -> new CustomerNotFoundException(id));
+
+        existingCustomer.setName(request.getName());
+        existingCustomer.setEmail(request.getEmail());
+        existingCustomer.setAge(request.getAge());
+        existingCustomer.setPhoneNumber(request.getPhoneNumber());
+        existingCustomer.setAddress(request.getAddress());
+        existingCustomer.setStatus(request.getStatus());
+        existingCustomer.setCustomerType(request.getCustomerType());
+
+        Customer updatedCustomer = customerRepository.save(existingCustomer);
+
+        return toResponse(updatedCustomer);
     }
 
-    public Customer updateCustomer(Long id, Customer customerDetails) {
-        Customer customer = getCustomerById(id);
-        if (customer == null) {
-            throw new RuntimeException("Customer not found with id: " + id);
-        }
+    public void createCustomers(List<CustomerRequest> requests) {
 
-        customer.setName(customerDetails.getName());
-        customer.setEmail(customerDetails.getEmail());
-        return customerRepository.save(customer);
+        List<Customer> customers = requests.stream()
+                .map(request -> {
+
+                    Customer customer = new Customer();
+
+                    customer.setName(request.getName());
+                    customer.setEmail(request.getEmail());
+                    customer.setAge(request.getAge());
+                    customer.setPhoneNumber(request.getPhoneNumber());
+                    customer.setAddress(request.getAddress());
+                    customer.setStatus(request.getStatus());
+                    customer.setCustomerType(request.getCustomerType());
+
+                    return customer;
+
+                })
+                .toList();
+
+        customerRepository.saveAll(customers);
     }
 
     public void deleteCustomer(Long id) {
-        Customer customer = getCustomerById(id);
-        if (customer == null) {
-            throw new RuntimeException("Customer not found with id: " + id);
-        }
+
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new CustomerNotFoundException(id));
+
         customerRepository.delete(customer);
     }
 
+    private CustomerResponse toResponse(Customer customer) {
+
+        return new CustomerResponse(
+                customer.getId(),
+                customer.getName(),
+                customer.getEmail(),
+                customer.getAge(),
+                customer.getPhoneNumber(),
+                customer.getAddress(),
+                customer.getStatus(),
+                customer.getCustomerType());
+    }
 }
