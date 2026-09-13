@@ -1,0 +1,12 @@
+cluster: customer-api-local
+
+customSecretName: newrelic-license
+customSecretLicenseKey: licenseKey
+
+daemonset:
+  extraArgs:
+    - "--config=yaml:exporters::otlp_http/newrelic::endpoint: https://otlp.eu01.nr-data.net"
+
+deployment:
+  extraArgs:
+    - "--config=yaml:exporters::otlp_http/newrelic::endpoint: https://otlp.eu01.nr-data.net"

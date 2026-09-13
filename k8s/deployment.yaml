@@ -5,7 +5,13 @@ metadata:
   name: customer-api
 
 spec:
-  replicas: 1
+  replicas: 2
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
 
   selector:
     matchLabels:
@@ -18,11 +24,39 @@ spec:
 
     spec:
       containers:
+
         - name: customer-api
+
           image: ghcr.io/bimbitha/customer-api:latest
 
           ports:
             - containerPort: 8080
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
 
           env:
             - name: DB_POSTGRES_PASSWORD
@@ -31,26 +65,15 @@ spec:
                   name: customer-api-secret
                   key: DB_POSTGRES_PASSWORD
 
-            - name: SPRING_DATASOURCE_URL
-              value: jdbc:postgresql://host.docker.internal:5432/customer_db
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: customer-api-newrelic
+                  key: NEW_RELIC_LICENSE_KEY
 
-            - name: SPRING_DATASOURCE_USERNAME
-              value: postgres
+            - name: NEW_RELIC_APP_NAME
+              value: "Customer API"
 
-    livenessProbe:
-      httpGet:
-        path: /actuator/health/liveness
-        port: 8080
-      initialDelaySeconds: 30
-      periodSeconds: 10
-      timeoutSeconds: 3
-      failureThreshold: 3
-
-    readinessProbe:
-      httpGet:
-        path: /actuator/health/readiness
-        port: 8080
-      initialDelaySeconds: 20
-      periodSeconds: 10
-      timeoutSeconds: 3
-      failureThreshold: 3
+          envFrom:
+            - configMapRef:
+                name: customer-api-config
